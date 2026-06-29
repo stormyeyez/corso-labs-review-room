@@ -21,17 +21,18 @@ type AgentRole = {
   label: string;
   short: string;
   role: string;
+  detail: string;
 };
 
 const agentRoles: AgentRole[] = [
-  { id: "intake", label: "Intake", short: "sort facts", role: "Triage, vitals, timeline" },
-  { id: "image-evidence", label: "Image", short: "read JPG", role: "Reads raster image" },
-  { id: "workup", label: "Workup", short: "organize tests", role: "Groups tests/results" },
-  { id: "mdm-draft", label: "HPI", short: "draft story", role: "Drafts note story" },
-  { id: "medical-literature", label: "Claim Check", short: "support claims", role: "Checks medical support" },
-  { id: "institution-context", label: "Local Rules", short: "flag context", role: "Flags hospital context" },
-  { id: "safety-review", label: "Safety", short: "check claims", role: "Blocks overclaims" },
-  { id: "coordinator", label: "Merge", short: "final review", role: "Merges final packet" },
+  { id: "intake", label: "Intake", short: "sort facts", role: "Triage, vitals, timeline", detail: "Builds the case timeline from arrival, symptoms, vitals, and clinician concerns." },
+  { id: "image-evidence", label: "Image", short: "read JPG", role: "Reads raster image", detail: "Reads the non-selectable EMR image for ECG, troponin, CXR, and vital facts." },
+  { id: "workup", label: "Workup", short: "organize tests", role: "Groups tests/results", detail: "Groups resulted and pending tests so the note does not bury key findings." },
+  { id: "mdm-draft", label: "HPI", short: "draft story", role: "Drafts note story", detail: "Turns the raw encounter into clinician-editable documentation language." },
+  { id: "medical-literature", label: "Claim Check", short: "support claims", role: "Checks medical support", detail: "Checks whether note claims have medical-source support or need review." },
+  { id: "institution-context", label: "Local Rules", short: "flag context", role: "Flags hospital context", detail: "Flags local assay, repeat-timing, and pathway details that vary by hospital." },
+  { id: "safety-review", label: "Safety", short: "check claims", role: "Blocks overclaims", detail: "Removes diagnosis, treatment, disposition, and validation overclaims." },
+  { id: "coordinator", label: "Merge", short: "final review", role: "Merges final packet", detail: "Merges all checks into the final physician note review packet." },
 ];
 
 const CEREBRAS_MODEL = "gemma-4-31b";
@@ -120,6 +121,14 @@ function EventStrip() {
       <div className="event-copy">
         <strong>Hackathon participant build</strong>
         <span>Independent submission - trademarks belong to their owners - synthetic demo only</span>
+        <nav aria-label="Public project links" className="event-links">
+          <a href="https://github.com/stormyeyez/corso-labs-review-room" rel="noreferrer" target="_blank">
+            GitHub
+          </a>
+          <a href="https://x.com/tk112190" rel="noreferrer" target="_blank">
+            X / @tk112190
+          </a>
+        </nav>
       </div>
       <div className="event-tags" aria-label="Hackathon fit">
         <span>Multimodal</span>
@@ -226,11 +235,14 @@ function AgentProgress({
 
       <div className="agent-role-row">
         <div>
-          <b>Agent roles</b>
-          <span>opens on run</span>
+          <b>Agent responsibilities</b>
+          <span>why each step exists</span>
         </div>
         {displayedAgents.map((agent) => (
-          <span key={agent.id}>{agent.role}</span>
+          <article key={agent.id}>
+            <b>{agent.role}</b>
+            <span>{agent.detail}</span>
+          </article>
         ))}
       </div>
     </section>
@@ -654,7 +666,9 @@ export function ReviewRoomApp() {
     <div className="review-room">
       <header className="app-header">
         <div>
-          <p>Corso Labs</p>
+          <p>
+            <b>Corso</b> Labs
+          </p>
           <h1>ED Documentation Review Room</h1>
           <span>Image-aware agent workflow for emergency documentation QA</span>
         </div>

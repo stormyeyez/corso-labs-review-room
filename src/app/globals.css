@@ -78,10 +78,17 @@ p {
 
 .app-header p {
   color: #cbd5e1;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.app-header p b {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 1000;
+  letter-spacing: 0.08em;
 }
 
 .app-header h1 {
@@ -224,6 +231,29 @@ p {
   color: var(--muted);
   font-size: 12px;
   font-weight: 750;
+}
+
+.event-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.event-links a {
+  padding: 4px 8px;
+  border: 1px solid #94a3b8;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.event-links a:hover {
+  border-color: var(--teal);
+  color: var(--teal-dark);
 }
 
 .event-tags {
@@ -394,15 +424,21 @@ p {
 
 .agent-time-row span {
   display: grid;
-  height: 26px;
+  height: 34px;
   place-items: center;
   border-radius: 999px;
-  font-size: 11px;
-  font-weight: 900;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .cerebras-time {
-  background: var(--teal);
+  border: 1px solid #047857;
+  background: linear-gradient(180deg, #10b981 0%, #047857 100%);
+  box-shadow: inset 0 -1px 0 rgba(2, 44, 34, 0.28);
   color: #ffffff;
 }
 
@@ -423,14 +459,16 @@ p {
 }
 
 .gpu-time {
-  background: #64748b;
+  border: 1px solid #1d4ed8;
+  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  box-shadow: inset 0 -1px 0 rgba(30, 58, 138, 0.3);
   color: #ffffff;
 }
 
 .gpu-pending {
-  border: 1px solid #64748b;
-  background: #cbd5e1;
-  color: var(--ink);
+  border: 1px solid #7c3aed;
+  background: linear-gradient(180deg, #a78bfa 0%, #6d28d9 100%);
+  color: #ffffff;
 }
 
 .agent-time-row .gpu-pending:empty {
@@ -440,13 +478,13 @@ p {
 
 .agent-role-row {
   align-items: stretch;
-  padding-top: 9px;
+  padding-top: 12px;
   border-top: 1px solid #e5e7eb;
 }
 
 .agent-role-row > div {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   line-height: 1.15;
 }
@@ -457,16 +495,31 @@ p {
   font-weight: 700;
 }
 
-.agent-role-row > span {
-  padding: 7px 6px;
+.agent-role-row > article {
+  min-height: 88px;
+  padding: 10px 8px;
   border: 1px solid var(--line-soft);
   border-radius: 7px;
   background: #f8fafc;
   color: var(--ink);
-  font-size: 10px;
-  font-weight: 750;
   line-height: 1.18;
   text-align: center;
+}
+
+.agent-role-row > article b {
+  display: block;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.agent-role-row > article span {
+  display: block;
+  margin-top: 6px;
+  color: #334155;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.25;
 }
 
 .status-message {
