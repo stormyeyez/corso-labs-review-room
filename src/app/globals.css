@@ -91,6 +91,29 @@ p {
   letter-spacing: 0.08em;
 }
 
+.brand-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-row a {
+  padding: 4px 8px;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  background: #111827;
+  color: #c7d2fe;
+  font-size: 11px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.brand-row a:hover {
+  border-color: #818cf8;
+  color: #ffffff;
+}
+
 .app-header h1 {
   margin-top: 2px;
   font-size: 22px;
@@ -294,18 +317,37 @@ p {
 }
 
 .why-panel {
-  padding: 14px 16px;
+  padding: 18px 18px 17px;
+  border-color: #0f766e;
+  background:
+    linear-gradient(90deg, rgba(204, 251, 241, 0.72), rgba(255, 255, 255, 0.86)),
+    var(--surface);
+  box-shadow: 0 8px 22px rgba(15, 118, 110, 0.1);
 }
 
 .why-panel h2 {
+  max-width: 1060px;
+  margin-bottom: 8px;
+  color: #042f2e;
+  font-size: 24px;
+  font-weight: 950;
+  line-height: 1.12;
+}
+
+.why-panel .why-eyebrow {
   margin-bottom: 6px;
-  font-size: 16px;
-  font-weight: 850;
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .why-panel p {
   max-width: 1180px;
-  font-size: 14px;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 650;
 }
 
 .start-panel {
@@ -456,6 +498,28 @@ p {
   background-size: 180% 100%;
   color: #ffffff;
   animation: progressPulse 1.1s linear infinite;
+}
+
+.cerebras-time.time-waiting,
+.gpu-pending.time-waiting {
+  border: 1px dashed #94a3b8;
+  background: #f8fafc;
+  box-shadow: none;
+  color: #475569;
+}
+
+.cerebras-time.time-done {
+  border-color: #047857;
+  background: #d1fae5;
+  box-shadow: none;
+  color: #064e3b;
+}
+
+.gpu-pending.time-done {
+  border-color: #3b82f6;
+  background: #dbeafe;
+  box-shadow: none;
+  color: #1e3a8a;
 }
 
 .gpu-time {
@@ -1091,6 +1155,10 @@ p {
   .app-header h1 {
     font-size: 19px;
     white-space: normal;
+  }
+
+  .why-panel h2 {
+    font-size: 20px;
   }
 
   .start-panel button {

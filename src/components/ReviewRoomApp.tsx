@@ -172,11 +172,13 @@ function IntroAndStart({ runState, onRun }: { runState: RunState; onRun: () => v
   return (
     <section className="intro-start-grid">
       <div className="why-panel">
-        <h2>Why this matters in emergency care</h2>
+        <p className="why-eyebrow">Why this matters in emergency care</p>
+        <h2>Fast inference turns an agent workflow from a waiting-room task into an interactive review.</h2>
         <p>
-          This is a Cerebras speed showcase in a realistic ED workflow: the same raster chart image
-          and same review task run through Cerebras and a GPU path, then the page shows how much
-          faster Cerebras returns a usable physician-note review.
+          The demo sends the same raster electronic medical record image and same physician-note review
+          task through Cerebras and a GPU path. The point is practical: if a multi-agent chart review
+          comes back in seconds, an ED clinician can inspect, edit, and move on while the encounter is
+          still live.
         </p>
       </div>
       <div className="start-panel">
@@ -196,12 +198,14 @@ function AgentProgress({
   gpuState,
   runState,
   activeStep,
+  gpuActiveStep,
 }: {
   cerebrasRun: ProviderRunResponse | null;
   gpuRun: ProviderRunResponse | null;
   gpuState: ProviderRunState;
   runState: RunState;
   activeStep: number;
+  gpuActiveStep: number;
 }) {
   const displayedAgents = useDisplayedAgents(cerebrasRun?.agents ?? null);
   const isIdle = runState === "idle";
@@ -238,24 +242,44 @@ function AgentProgress({
         <b>Cerebras</b>
         {displayedAgents.map((agent, index) => (
           <span
-            className={`cerebras-time ${isIdle ? "time-empty" : ""} ${isRunning && index <= activeStep ? "time-running" : ""}`}
+            className={`cerebras-time ${isIdle ? "time-empty" : ""} ${isRunning && index < activeStep ? "time-done" : ""} ${
+              isRunning && index === activeStep ? "time-running" : ""
+            } ${isRunning && index > activeStep ? "time-waiting" : ""}`}
             key={agent.id}
           >
-            {isIdle ? "0.00s" : isRunning ? (index <= activeStep ? "running" : "in progress") : seconds(agent.elapsedMs, 2)}
+            {isIdle
+              ? "0.00s"
+              : isRunning
+                ? index < activeStep
+                  ? "done"
+                  : index === activeStep
+                    ? "running"
+                    : "waiting"
+                : seconds(agent.elapsedMs, 2)}
           </span>
         ))}
       </div>
 
       <div className="agent-time-row">
         <b>GPU</b>
-        {agentRoles.map((agent) => (
+        {agentRoles.map((agent, index) => (
           <span
-            className={`${gpuState === "complete" ? "gpu-time" : "gpu-pending"} ${isIdle ? "time-empty" : ""} ${
-              gpuState === "running" ? "time-running" : ""
+            className={`${gpuState === "complete" || gpuRun ? "gpu-time" : "gpu-pending"} ${isIdle ? "time-empty" : ""} ${
+              gpuState === "running" && index < gpuActiveStep ? "time-done" : ""
+            } ${gpuState === "running" && index === gpuActiveStep ? "time-running" : ""} ${
+              gpuState === "running" && index > gpuActiveStep ? "time-waiting" : ""
             }`}
             key={agent.id}
           >
-            {isIdle ? "0.00s" : gpuState === "complete" ? "complete" : gpuRun ? "complete" : "in progress"}
+            {isIdle
+              ? "0.00s"
+              : gpuState === "complete" || gpuRun
+                ? "complete"
+                : index < gpuActiveStep
+                  ? "done"
+                  : index === gpuActiveStep
+                    ? "running"
+                    : "waiting"}
           </span>
         ))}
       </div>
@@ -604,6 +628,7 @@ export function ReviewRoomApp() {
   const [runState, setRunState] = useState<RunState>("idle");
   const [gpuState, setGpuState] = useState<ProviderRunState>("idle");
   const [activeStep, setActiveStep] = useState(-1);
+  const [gpuActiveStep, setGpuActiveStep] = useState(-1);
   const [imageOpen, setImageOpen] = useState(false);
   const result = cerebrasRun?.packet
     ? ({
@@ -629,9 +654,13 @@ export function ReviewRoomApp() {
     setCerebrasRun(null);
     setGpuRun(null);
     setActiveStep(0);
+    setGpuActiveStep(0);
     const progressTimer = window.setInterval(() => {
       setActiveStep((step) => Math.min(step + 1, agentRoles.length - 1));
-    }, 520);
+    }, 360);
+    const gpuProgressTimer = window.setInterval(() => {
+      setGpuActiveStep((step) => Math.min(step + 1, agentRoles.length - 1));
+    }, 1900);
 
     try {
       const cerebrasPromise = fetch("/api/run-provider", {
@@ -657,6 +686,7 @@ export function ReviewRoomApp() {
       setCerebrasRun(nextCerebrasRun);
       setActiveStep(agentRoles.length - 1);
       setRunState("cerebras-complete");
+      window.clearInterval(progressTimer);
 
       try {
         const gpuResponse = await gpuPromise;
@@ -666,6 +696,7 @@ export function ReviewRoomApp() {
         }
 
         setGpuRun((await gpuResponse.json()) as ProviderRunResponse);
+        setGpuActiveStep(agentRoles.length - 1);
         setGpuState("complete");
         setRunState("complete");
       } catch {
@@ -674,6 +705,7 @@ export function ReviewRoomApp() {
           metrics: fallbackReview.openrouter,
           errorSummary: "GPU timing route failed safely; cached comparison shown.",
         });
+        setGpuActiveStep(agentRoles.length - 1);
         setGpuState("error");
         setRunState("complete");
       }
@@ -692,9 +724,11 @@ export function ReviewRoomApp() {
       });
       setGpuState("error");
       setActiveStep(agentRoles.length - 1);
+      setGpuActiveStep(agentRoles.length - 1);
       setRunState("error");
     } finally {
       window.clearInterval(progressTimer);
+      window.clearInterval(gpuProgressTimer);
     }
   }
 
@@ -702,9 +736,14 @@ export function ReviewRoomApp() {
     <div className="review-room">
       <header className="app-header">
         <div>
-          <p>
-            <b>Corso</b> Labs
-          </p>
+          <div className="brand-row">
+            <p>
+              <b>Corso</b> Labs
+            </p>
+            <a href="https://corsoem.com" rel="noreferrer" target="_blank">
+              Main project: corsoem.com
+            </a>
+          </div>
           <h1>ED Documentation Review Room</h1>
           <span>Image-aware agent workflow for emergency documentation QA</span>
         </div>
@@ -729,6 +768,7 @@ export function ReviewRoomApp() {
           gpuState={gpuState}
           runState={runState}
           activeStep={activeStep}
+          gpuActiveStep={gpuActiveStep}
         />
 
         {runState === "error" ? (
