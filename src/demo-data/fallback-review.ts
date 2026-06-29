@@ -107,7 +107,7 @@ export const fallbackReview: RaceResult = {
       "Mock result image states CXR has no acute cardiopulmonary finding.",
     ],
     mdmDraft:
-      "MDM draft for clinician editing: Patient evaluated for acute chest discomfort with ACS considered. ECG, initial hs-troponin, chest radiograph, vitals, treatment response, and reassessment were reviewed. Symptoms improved after ED treatment. Serial troponin interpretation and final risk assessment require clinician review and institution-specific assay context. PE and aortic dissection were considered less likely from the supplied facts but are not autonomously excluded by this tool.",
+      "MDM draft for clinician editing: Patient evaluated for acute chest discomfort with ACS considered. ECG, initial hs-troponin, chest radiograph, vitals, treatment response, and reassessment were reviewed. Symptoms improved after ED treatment. Serial troponin interpretation and final risk assessment require clinician review and institution-specific assay context. PE and aortic dissection were considered less likely from the supplied facts, with final reasoning left to the clinician.",
     medicalLiteratureMatches: [
       {
         claim: "ECG and troponin review are relevant when ACS is considered in ED chest pain documentation.",
