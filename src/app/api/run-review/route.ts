@@ -4,6 +4,7 @@ import type { RaceResult } from "@/lib/types";
 import { runReviewRace, type RunReviewRaceOptions } from "@/lib/agents/run-review";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 type RunReviewBody = {
   useFallback?: boolean;

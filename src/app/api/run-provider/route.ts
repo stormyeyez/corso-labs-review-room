@@ -7,6 +7,7 @@ import {
 } from "@/lib/agents/run-review";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 type RunProviderBody = {
   provider?: "cerebras" | "openrouter";
