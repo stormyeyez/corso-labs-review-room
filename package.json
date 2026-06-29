@@ -1,0 +1,27 @@
+{
+  "name": "corso-labs-review-room",
+  "version": "0.1.0",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}

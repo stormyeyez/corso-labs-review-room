@@ -1,0 +1,12 @@
+.env
+.env.local
+.env.*.local
+.next
+node_modules
+.git
+.claude
+.superpowers
+docs
+prototype
+*.log
+.DS_Store
