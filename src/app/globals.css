@@ -166,77 +166,81 @@ p {
 
 .event-strip {
   display: grid;
-  grid-template-columns: auto minmax(260px, 1fr) auto;
+  min-height: 94px;
+  grid-template-columns: auto minmax(300px, 1fr) auto;
   align-items: center;
-  gap: 13px;
-  padding: 9px 12px;
+  gap: 18px;
+  padding: 14px 18px;
   box-shadow: 0 5px 14px rgba(17, 24, 39, 0.05);
 }
 
 .event-logos {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 9px;
+  gap: 14px;
+  padding: 12px 15px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
   background: #f8fafc;
 }
 
 .event-logos img:first-child {
-  width: 104px;
-  height: 27px;
+  width: 150px;
+  height: 39px;
   object-fit: contain;
 }
 
 .event-logos img:last-child {
-  width: 134px;
-  height: 27px;
+  width: 194px;
+  height: 39px;
   object-fit: contain;
 }
 
 .event-logos b {
   color: var(--subtle);
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 950;
 }
 
 .event-copy strong {
   display: block;
   color: var(--teal);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 950;
   letter-spacing: 0.1em;
-  line-height: 1.1;
+  line-height: 1.15;
   text-transform: uppercase;
 }
 
 .event-copy {
+  display: grid;
+  align-content: center;
   min-width: 0;
 }
 
 .event-copy span {
   display: block;
-  margin-top: 3px;
+  margin-top: 4px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 750;
 }
 
 .event-tags {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
 }
 
 .event-tags span {
-  padding: 4px 8px;
+  padding: 6px 10px;
   border: 1px solid #14b8a6;
   border-radius: 999px;
   background: var(--teal-soft);
   color: var(--teal-dark);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -944,11 +948,11 @@ p {
   }
 
   .event-logos img:first-child {
-    width: 94px;
+    width: 120px;
   }
 
   .event-logos img:last-child {
-    width: 120px;
+    width: 154px;
   }
 
   .event-copy span {
