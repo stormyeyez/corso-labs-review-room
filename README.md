@@ -4,6 +4,11 @@ Public hackathon prototype for the Cerebras and Google DeepMind Gemma 4 hackatho
 
 The app demonstrates a fast, multimodal, multi-agent emergency department documentation QA workflow powered by Gemma 4 31B on Cerebras, with a GPU comparison path through OpenRouter.
 
+## Links
+
+- Live app: https://corso-labs-review-room.vercel.app
+- Source: https://github.com/stormyeyez/corso-labs-review-room
+
 ## What It Shows
 
 - A synthetic raster electronic medical record image.
