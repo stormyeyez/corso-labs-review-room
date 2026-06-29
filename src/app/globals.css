@@ -668,6 +668,12 @@ p {
   border-radius: 8px;
 }
 
+.note-preview-reveal {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: revealCard 360ms ease-out forwards;
+}
+
 .output-panel-empty {
   border-style: dashed;
 }
@@ -688,6 +694,17 @@ p {
   margin-top: 5px;
   color: var(--ink);
   font-size: 13px;
+}
+
+.type-caret {
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  margin-left: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  vertical-align: -0.14em;
+  animation: caretBlink 850ms steps(2, end) infinite;
 }
 
 .note-preview-empty p {
@@ -727,6 +744,12 @@ p {
 .image-extraction-panel div {
   margin-top: 7px;
   font-size: 13px;
+}
+
+.extraction-fact-live {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: revealFact 320ms ease-out forwards;
 }
 
 .benchmark-panel {
@@ -773,6 +796,12 @@ p {
   padding: 10px;
   border-radius: 8px;
   text-align: center;
+}
+
+.result-pop {
+  opacity: 0;
+  transform: translateY(6px) scale(0.985);
+  animation: resultPop 360ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 .provider-time span {
@@ -930,6 +959,81 @@ p {
 
   to {
     background-position: 180% 50%;
+  }
+}
+
+@keyframes revealCard {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes revealFact {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes resultPop {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+
+  65% {
+    opacity: 1;
+    transform: translateY(0) scale(1.015);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes caretBlink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+
+  46%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+
+  .note-preview-reveal,
+  .extraction-fact-live,
+  .result-pop {
+    opacity: 1;
+    transform: none;
+  }
+
+  .type-caret {
+    display: none;
   }
 }
 

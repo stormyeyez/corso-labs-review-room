@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fallbackReview } from "@/demo-data/fallback-review";
 import { calculateSpeedup, formatMs } from "@/lib/metrics";
 import type { AgentTrace, ProviderMetrics, RaceResult, ReviewPacket } from "@/lib/types";
@@ -84,6 +84,33 @@ function useDisplayedAgents(agents: AgentTrace[] | null) {
       };
     });
   }, [agents]);
+}
+
+function useTypewriterText(text: string, enabled = true) {
+  const [visibleText, setVisibleText] = useState(enabled ? "" : text);
+
+  useEffect(() => {
+    if (!enabled) {
+      setVisibleText(text);
+      return;
+    }
+
+    setVisibleText("");
+    let index = 0;
+    const stepSize = Math.max(1, Math.ceil(text.length / 140));
+    const timer = window.setInterval(() => {
+      index = Math.min(text.length, index + stepSize);
+      setVisibleText(text.slice(0, index));
+
+      if (index >= text.length) {
+        window.clearInterval(timer);
+      }
+    }, 8);
+
+    return () => window.clearInterval(timer);
+  }, [enabled, text]);
+
+  return visibleText;
 }
 
 function ImageModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -303,10 +330,10 @@ function OutputPanel({ result }: { result: RaceResult }) {
       </div>
 
       <div className="note-preview-grid">
-        <NotePreview title="HPI Draft">{hpiDraft}</NotePreview>
-        <NotePreview title="Exam / Status Summary">{statusSummary}</NotePreview>
-        <NotePreview title="Result Synthesis">{resultSynthesis || "ECG, troponin, CXR, CBC/BMP and reassessment facts are extracted for review."}</NotePreview>
-        <NotePreview title="Medical Decision Reasoning">{reasoning}</NotePreview>
+        <NotePreview order={0} title="HPI Draft">{hpiDraft}</NotePreview>
+        <NotePreview order={1} title="Exam / Status Summary">{statusSummary}</NotePreview>
+        <NotePreview order={2} title="Result Synthesis">{resultSynthesis || "ECG, troponin, CXR, CBC/BMP and reassessment facts are extracted for review."}</NotePreview>
+        <NotePreview order={3} title="Medical Decision Reasoning">{reasoning}</NotePreview>
       </div>
     </section>
   );
@@ -349,11 +376,17 @@ function EmptyNote({ title, isRunning }: { title: string; isRunning: boolean }) 
   );
 }
 
-function NotePreview({ title, children }: { title: string; children: string }) {
+function NotePreview({ title, children, order = 0 }: { title: string; children: string; order?: number }) {
+  const visibleText = useTypewriterText(children);
+  const isComplete = visibleText.length >= children.length;
+
   return (
-    <article className="note-preview">
+    <article className="note-preview note-preview-reveal" style={{ animationDelay: `${order * 90}ms` }}>
       <h3>{title}</h3>
-      <p>{children}</p>
+      <p>
+        {visibleText}
+        {!isComplete ? <span aria-hidden="true" className="type-caret" /> : null}
+      </p>
     </article>
   );
 }
@@ -367,23 +400,23 @@ function ImageExtraction({ result, runState }: { result: RaceResult | null; runS
     <section className="image-extraction-panel">
       <p>Image extraction</p>
       <h2>Key facts read from pixels</h2>
-      <div>
+      <div className={result ? "extraction-fact extraction-fact-live" : ""} style={{ animationDelay: "0ms" }}>
         <b>Vitals:</b> {result ? "BP 152/88, HR 96, SpO2 98%" : emptyText}
       </div>
-      <div>
+      <div className={result ? "extraction-fact extraction-fact-live" : ""} style={{ animationDelay: "110ms" }}>
         <b>ECG:</b>{" "}
         {result
           ? facts.find((fact) => fact.toLowerCase().includes("ecg"))?.replace(/^ECG:\s*/i, "") ?? "sinus rhythm, no STEMI pattern"
           : emptyText}
       </div>
-      <div>
+      <div className={result ? "extraction-fact extraction-fact-live" : ""} style={{ animationDelay: "220ms" }}>
         <b>Troponin:</b>{" "}
         {result
           ? facts.find((fact) => fact.toLowerCase().includes("troponin"))?.replace(/^(hs-)?troponin:\s*/i, "") ??
             "initial 8 ng/L, repeat pending"
           : emptyText}
       </div>
-      <div>
+      <div className={result ? "extraction-fact extraction-fact-live" : ""} style={{ animationDelay: "330ms" }}>
         <b>CXR:</b>{" "}
         {result
           ? facts.find((fact) => fact.toLowerCase().includes("cxr"))?.replace(/^CXR:\s*/i, "") ?? "no acute cardiopulmonary abnormality"
@@ -418,15 +451,15 @@ function BenchmarkPanel({
         </span>
 
         <div className="provider-benchmark-grid">
-          <ProviderTime title="Cerebras" value={isRunning ? "running" : "0.0s"} variant="cerebras" />
-          <ProviderTime title="GPU" value={isRunning ? "running" : "0.0s"} variant="gpu" />
+          <ProviderTime order={0} title="Cerebras" value={isRunning ? "running" : "0.0s"} variant="cerebras" />
+          <ProviderTime order={1} title="GPU" value={isRunning ? "running" : "0.0s"} variant="gpu" />
         </div>
 
         <div className="speed-stat-grid">
-          <SpeedStat label="Wait reduction" value="--" detail={isRunning ? "measuring" : "not run yet"} tone="green" />
-          <SpeedStat label="Relative speed" value="--" detail="8-agent workflow" tone="green" />
-          <SpeedStat label="First token" value="--" detail={isRunning ? "waiting for first tokens" : "not run yet"} tone="blue" />
-          <SpeedStat label="Output speed" value="--" detail={isRunning ? "measuring tok/s" : "not run yet"} tone="blue" />
+          <SpeedStat order={0} label="Wait reduction" value="--" detail={isRunning ? "measuring" : "not run yet"} tone="green" />
+          <SpeedStat order={1} label="Relative speed" value="--" detail="8-agent workflow" tone="green" />
+          <SpeedStat order={2} label="First token" value="--" detail={isRunning ? "waiting for first tokens" : "not run yet"} tone="blue" />
+          <SpeedStat order={3} label="Output speed" value="--" detail={isRunning ? "measuring tok/s" : "not run yet"} tone="blue" />
         </div>
       </section>
     );
@@ -442,15 +475,15 @@ function BenchmarkPanel({
         </span>
 
         <div className="provider-benchmark-grid">
-          <ProviderTime title="Cerebras" value={seconds(result.cerebras.totalMs)} variant="cerebras" />
-          <ProviderTime title="GPU" value={gpuState === "error" ? "fallback" : "in progress"} variant="gpu" />
+          <ProviderTime order={0} title="Cerebras" value={seconds(result.cerebras.totalMs)} variant="cerebras" />
+          <ProviderTime order={1} title="GPU" value={gpuState === "error" ? "fallback" : "in progress"} variant="gpu" />
         </div>
 
         <div className="speed-stat-grid">
-          <SpeedStat label="Cerebras result" value="ready" detail="output shown immediately" tone="green" />
-          <SpeedStat label="GPU comparison" value="in progress" detail="waiting on OpenRouter timing" tone="blue" />
-          <SpeedStat label="Current advantage" value="Cerebras leads" detail="benchmark updates when GPU finishes" tone="green" />
-          <SpeedStat label="Output speed" value={metricOrNA(result.cerebras.outputTokensPerSecond)} detail="Cerebras tok/s returned" tone="blue" />
+          <SpeedStat order={0} label="Cerebras result" value="ready" detail="output shown immediately" tone="green" />
+          <SpeedStat order={1} label="GPU comparison" value="in progress" detail="waiting on OpenRouter timing" tone="blue" />
+          <SpeedStat order={2} label="Current advantage" value="Cerebras leads" detail="benchmark updates when GPU finishes" tone="green" />
+          <SpeedStat order={3} label="Output speed" value={metricOrNA(result.cerebras.outputTokensPerSecond)} detail="Cerebras tok/s returned" tone="blue" />
         </div>
       </section>
     );
@@ -480,19 +513,21 @@ function BenchmarkPanel({
       <span className="benchmark-subtitle">same raster image + same 8-agent workflow - GPU path measured for speed only</span>
 
       <div className="provider-benchmark-grid">
-        <ProviderTime title="Cerebras" value={seconds(result.cerebras.totalMs)} variant="cerebras" />
-        <ProviderTime title="GPU" value={seconds(result.openrouter.totalMs)} variant="gpu" />
+        <ProviderTime order={0} title="Cerebras" value={seconds(result.cerebras.totalMs)} variant="cerebras" />
+        <ProviderTime order={1} title="GPU" value={seconds(result.openrouter.totalMs)} variant="gpu" />
       </div>
 
       <div className="speed-stat-grid">
         <SpeedStat
+          order={0}
           label="Wait reduction"
           value={waitReduction === null ? "not reported" : `${waitReduction}% less`}
           detail={`${seconds(savedMs)} saved end-to-end`}
           tone="green"
         />
-        <SpeedStat label="Relative speed" value={speedup} detail="8-agent workflow" tone="green" />
+        <SpeedStat order={1} label="Relative speed" value={speedup} detail="8-agent workflow" tone="green" />
         <SpeedStat
+          order={2}
           label={hasTtft ? "First token" : "Completion tokens"}
           value={
             hasTtft
@@ -507,6 +542,7 @@ function BenchmarkPanel({
           tone="blue"
         />
         <SpeedStat
+          order={3}
           label="Output speed"
           value={`${metricOrNA(result.cerebras.outputTokensPerSecond)} vs ${metricOrNA(result.openrouter.outputTokensPerSecond)} tok/s`}
           detail={
@@ -521,18 +557,18 @@ function BenchmarkPanel({
   );
 }
 
-function ProviderTime({ title, value, variant }: { title: string; value: string; variant: "cerebras" | "gpu" }) {
+function ProviderTime({ title, value, variant, order = 0 }: { title: string; value: string; variant: "cerebras" | "gpu"; order?: number }) {
   return (
-    <article className={`provider-time provider-${variant}`}>
+    <article className={`provider-time provider-${variant} result-pop`} style={{ animationDelay: `${order * 80}ms` }}>
       <span>{title}</span>
       <b>{value}</b>
     </article>
   );
 }
 
-function SpeedStat({ label, value, detail, tone }: { label: string; value: string; detail: string; tone: "green" | "blue" }) {
+function SpeedStat({ label, value, detail, tone, order = 0 }: { label: string; value: string; detail: string; tone: "green" | "blue"; order?: number }) {
   return (
-    <article className={`speed-stat speed-stat-${tone}`}>
+    <article className={`speed-stat speed-stat-${tone} result-pop`} style={{ animationDelay: `${120 + order * 80}ms` }}>
       <span>{label}</span>
       <b>{value}</b>
       <small>{detail}</small>
