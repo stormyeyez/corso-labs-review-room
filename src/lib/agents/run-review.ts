@@ -18,6 +18,14 @@ export type RunReviewRaceOptions = {
   callOpenRouterProvider?: ProviderCaller;
 };
 
+export type ProviderReviewResult = {
+  provider: "cerebras" | "openrouter";
+  metrics: ProviderMetrics;
+  agents?: AgentTrace[];
+  packet?: ReviewPacket;
+  errorSummary?: string;
+};
+
 const cerebrasAgents: Array<{ id: AgentKind; label: string }> = [
   { id: "intake", label: "Intake" },
   { id: "image-evidence", label: "Image" },
@@ -211,56 +219,28 @@ export async function runReviewRace(options: RunReviewRaceOptions = {}): Promise
   });
 
   try {
-    const cerebrasPromise = runProviderChain({
-      provider: "cerebras",
+    const cerebrasPromise = runCerebrasReview({
       apiKey: cerebrasApiKey,
       callProvider: callCerebrasProvider,
-      buildPayload: buildCerebrasPayload,
-      imageDataUri,
-      concurrency: 2,
       startGate,
     });
-    const openRouterPromise = runProviderChain({
-      provider: "openrouter",
+    const openRouterPromise = runOpenRouterTiming({
       apiKey: openRouterApiKey,
       callProvider: callOpenRouterProvider,
-      buildPayload: buildOpenRouterPayload,
-      imageDataUri,
-      concurrency: 8,
       startGate,
     });
 
     releaseStartGate();
-    const [cerebrasChain, openRouterChain] = await Promise.all([cerebrasPromise, openRouterPromise]);
-
-    const cerebrasResults = cerebrasChain.results;
-    const openRouterResults = openRouterChain.results;
-    const cerebrasTotalMs = cerebrasChain.totalMs;
-    const openRouterTotalMs = openRouterChain.totalMs;
-    const coordinatorText = extractText(cerebrasResults[cerebrasResults.length - 1]?.json);
-    const tokenMetrics = aggregateTokenMetrics(cerebrasResults);
-    const gpuTokenMetrics = aggregateTokenMetrics(openRouterResults);
+    const [cerebrasReview, openRouterReview] = await Promise.all([cerebrasPromise, openRouterPromise]);
 
     return {
       encounter: demoEncounter,
       sourceCards,
-      agents: cerebrasChain.traces ?? [],
-      cerebras: {
-        provider: "cerebras",
-        model: CEREBRAS_MODEL,
-        totalMs: cerebrasTotalMs,
-        usedFallback: false,
-        ...tokenMetrics,
-      },
-      openrouter: {
-        provider: "openrouter",
-        model: OPENROUTER_MODEL,
-        totalMs: openRouterTotalMs,
-        usedFallback: false,
-        ...gpuTokenMetrics,
-      },
-      speedup: calculateSpeedup(cerebrasTotalMs, openRouterTotalMs),
-      packet: parseReviewPacket(coordinatorText),
+      agents: cerebrasReview.agents ?? [],
+      cerebras: cerebrasReview.metrics,
+      openrouter: openRouterReview.metrics,
+      speedup: calculateSpeedup(cerebrasReview.metrics.totalMs, openRouterReview.metrics.totalMs),
+      packet: cerebrasReview.packet ?? fallbackReview.packet,
     };
   } catch (error) {
     console.warn(
@@ -269,4 +249,71 @@ export async function runReviewRace(options: RunReviewRaceOptions = {}): Promise
     );
     return fallbackWithReason("Live provider call failed safely.");
   }
+}
+
+export async function runCerebrasReview({
+  apiKey,
+  callProvider = callCerebras,
+  startGate,
+}: {
+  apiKey: string;
+  callProvider?: ProviderCaller;
+  startGate?: Promise<void>;
+}): Promise<ProviderReviewResult> {
+  const chain = await runProviderChain({
+    provider: "cerebras",
+    apiKey,
+    callProvider,
+    buildPayload: buildCerebrasPayload,
+    imageDataUri: getMockResultImageDataUri(),
+    concurrency: 2,
+    startGate,
+  });
+  const tokenMetrics = aggregateTokenMetrics(chain.results);
+  const coordinatorText = extractText(chain.results[chain.results.length - 1]?.json);
+
+  return {
+    provider: "cerebras",
+    agents: chain.traces ?? [],
+    packet: parseReviewPacket(coordinatorText),
+    metrics: {
+      provider: "cerebras",
+      model: CEREBRAS_MODEL,
+      totalMs: chain.totalMs,
+      usedFallback: false,
+      ...tokenMetrics,
+    },
+  };
+}
+
+export async function runOpenRouterTiming({
+  apiKey,
+  callProvider = callOpenRouter,
+  startGate,
+}: {
+  apiKey: string;
+  callProvider?: ProviderCaller;
+  startGate?: Promise<void>;
+}): Promise<ProviderReviewResult> {
+  const chain = await runProviderChain({
+    provider: "openrouter",
+    apiKey,
+    callProvider,
+    buildPayload: buildOpenRouterPayload,
+    imageDataUri: getMockResultImageDataUri(),
+    concurrency: 8,
+    startGate,
+  });
+  const tokenMetrics = aggregateTokenMetrics(chain.results);
+
+  return {
+    provider: "openrouter",
+    metrics: {
+      provider: "openrouter",
+      model: OPENROUTER_MODEL,
+      totalMs: chain.totalMs,
+      usedFallback: false,
+      ...tokenMetrics,
+    },
+  };
 }

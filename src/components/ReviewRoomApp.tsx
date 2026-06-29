@@ -2,10 +2,19 @@
 
 import { useMemo, useState } from "react";
 import { fallbackReview } from "@/demo-data/fallback-review";
-import { formatMs } from "@/lib/metrics";
-import type { AgentTrace, ProviderMetrics, RaceResult } from "@/lib/types";
+import { calculateSpeedup, formatMs } from "@/lib/metrics";
+import type { AgentTrace, ProviderMetrics, RaceResult, ReviewPacket } from "@/lib/types";
 
-type RunState = "idle" | "running" | "complete" | "error";
+type RunState = "idle" | "running" | "cerebras-complete" | "complete" | "error";
+type ProviderRunState = "idle" | "running" | "complete" | "error";
+
+type ProviderRunResponse = {
+  provider: "cerebras" | "openrouter";
+  metrics: ProviderMetrics;
+  agents?: AgentTrace[];
+  packet?: ReviewPacket;
+  errorSummary?: string;
+};
 
 type AgentRole = {
   id: string;
@@ -25,7 +34,6 @@ const agentRoles: AgentRole[] = [
   { id: "coordinator", label: "Merge", short: "final review", role: "Merges final packet" },
 ];
 
-const demoGpuStepsMs = [1800, 2400, 2000, 3100];
 const CEREBRAS_MODEL = "gemma-4-31b";
 const OPENROUTER_MODEL = "google/gemma-4-31b-it";
 
@@ -61,9 +69,9 @@ function getTraceById(agents: AgentTrace[]) {
   return new Map(agents.map((agent) => [agent.id, agent]));
 }
 
-function useDisplayedAgents(result: RaceResult | null) {
+function useDisplayedAgents(agents: AgentTrace[] | null) {
   return useMemo(() => {
-    const byId = getTraceById(result?.agents ?? []);
+    const byId = getTraceById(agents ?? []);
 
     return agentRoles.map((role, index) => {
       const trace = byId.get(role.id);
@@ -71,10 +79,10 @@ function useDisplayedAgents(result: RaceResult | null) {
 
       return {
         ...role,
-        elapsedMs: result ? trace?.elapsedMs ?? fallbackTrace?.elapsedMs ?? 0 : 0,
+        elapsedMs: agents ? trace?.elapsedMs ?? fallbackTrace?.elapsedMs ?? 0 : 0,
       };
     });
-  }, [result]);
+  }, [agents]);
 }
 
 function ImageModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -123,7 +131,7 @@ function EventStrip() {
 }
 
 function IntroAndStart({ runState, onRun }: { runState: RunState; onRun: () => void }) {
-  const isRunning = runState === "running";
+  const isRunning = runState === "running" || runState === "cerebras-complete";
 
   return (
     <section className="intro-start-grid">
@@ -147,17 +155,22 @@ function IntroAndStart({ runState, onRun }: { runState: RunState; onRun: () => v
 }
 
 function AgentProgress({
-  result,
+  cerebrasRun,
+  gpuRun,
+  gpuState,
   runState,
   activeStep,
 }: {
-  result: RaceResult | null;
+  cerebrasRun: ProviderRunResponse | null;
+  gpuRun: ProviderRunResponse | null;
+  gpuState: ProviderRunState;
   runState: RunState;
   activeStep: number;
 }) {
-  const displayedAgents = useDisplayedAgents(result);
+  const displayedAgents = useDisplayedAgents(cerebrasRun?.agents ?? null);
   const isIdle = runState === "idle";
   const isRunning = runState === "running";
+  const isCerebrasComplete = runState === "cerebras-complete";
 
   return (
     <section className="agent-progress-panel">
@@ -167,7 +180,9 @@ function AgentProgress({
           <h2>
             {isIdle
               ? "Waiting to start: both providers will launch together from one server timestamp"
-              : "Both providers start from the same server timestamp; only Cerebras output is displayed"}
+              : isCerebrasComplete
+                ? "Cerebras finished first; GPU is still in progress for the timing comparison"
+                : "Both providers start from the same click; only Cerebras output is displayed"}
           </h2>
         </div>
         <span>{isIdle ? "0.00s until run starts" : "real per-step timings when live"}</span>
@@ -190,31 +205,21 @@ function AgentProgress({
             className={`cerebras-time ${isIdle ? "time-empty" : ""} ${isRunning && index <= activeStep ? "time-running" : ""}`}
             key={agent.id}
           >
-            {isIdle ? "0.00s" : isRunning ? (index <= activeStep ? "running" : "pending") : seconds(agent.elapsedMs, 2)}
+            {isIdle ? "0.00s" : isRunning ? (index <= activeStep ? "running" : "in progress") : seconds(agent.elapsedMs, 2)}
           </span>
         ))}
       </div>
 
       <div className="agent-time-row">
         <b>GPU</b>
-        {agentRoles.map((agent, index) => (
+        {agentRoles.map((agent) => (
           <span
-            className={`${!isIdle && !isRunning && index < demoGpuStepsMs.length ? "gpu-time" : "gpu-pending"} ${
-              isIdle ? "time-empty" : ""
-            } ${isRunning && index <= activeStep ? "time-running" : ""}`}
+            className={`${gpuState === "complete" ? "gpu-time" : "gpu-pending"} ${isIdle ? "time-empty" : ""} ${
+              gpuState === "running" ? "time-running" : ""
+            }`}
             key={agent.id}
           >
-            {isIdle
-              ? "0.00s"
-              : isRunning
-                ? index <= activeStep
-                  ? "running"
-                  : "pending"
-                : index < demoGpuStepsMs.length
-                  ? seconds(demoGpuStepsMs[index])
-                  : index === demoGpuStepsMs.length
-                    ? "pending"
-                    : ""}
+            {isIdle ? "0.00s" : gpuState === "complete" ? "complete" : gpuRun ? "complete" : "in progress"}
           </span>
         ))}
       </div>
@@ -376,7 +381,17 @@ function ImageExtraction({ result, runState }: { result: RaceResult | null; runS
   );
 }
 
-function BenchmarkPanel({ result, runState }: { result: RaceResult | null; runState: RunState }) {
+function BenchmarkPanel({
+  result,
+  gpuRun,
+  gpuState,
+  runState,
+}: {
+  result: RaceResult | null;
+  gpuRun: ProviderRunResponse | null;
+  gpuState: ProviderRunState;
+  runState: RunState;
+}) {
   if (!result) {
     const isRunning = runState === "running";
 
@@ -400,6 +415,30 @@ function BenchmarkPanel({ result, runState }: { result: RaceResult | null; runSt
           <SpeedStat label="Relative speed" value="--" detail="8-agent workflow" tone="green" />
           <SpeedStat label="First token" value="--" detail={isRunning ? "waiting for first tokens" : "not run yet"} tone="blue" />
           <SpeedStat label="Output speed" value="--" detail={isRunning ? "measuring tok/s" : "not run yet"} tone="blue" />
+        </div>
+      </section>
+    );
+  }
+
+  if (!gpuRun) {
+    return (
+      <section className="benchmark-panel benchmark-panel-awaiting-gpu" aria-live="polite">
+        <p>3 Speed benchmark</p>
+        <h2>Cerebras finished first</h2>
+        <span className="benchmark-subtitle">
+          Cerebras output is ready now. GPU path is still in progress for timing comparison.
+        </span>
+
+        <div className="provider-benchmark-grid">
+          <ProviderTime title="Cerebras" value={seconds(result.cerebras.totalMs)} variant="cerebras" />
+          <ProviderTime title="GPU" value={gpuState === "error" ? "fallback" : "in progress"} variant="gpu" />
+        </div>
+
+        <div className="speed-stat-grid">
+          <SpeedStat label="Cerebras result" value="ready" detail="output shown immediately" tone="green" />
+          <SpeedStat label="GPU comparison" value="in progress" detail="waiting on OpenRouter timing" tone="blue" />
+          <SpeedStat label="Current advantage" value="Cerebras leads" detail="benchmark updates when GPU finishes" tone="green" />
+          <SpeedStat label="Output speed" value={metricOrNA(result.cerebras.outputTokensPerSecond)} detail="Cerebras tok/s returned" tone="blue" />
         </div>
       </section>
     );
@@ -512,38 +551,98 @@ function SupportCards() {
 }
 
 export function ReviewRoomApp() {
-  const [result, setResult] = useState<RaceResult | null>(null);
+  const [cerebrasRun, setCerebrasRun] = useState<ProviderRunResponse | null>(null);
+  const [gpuRun, setGpuRun] = useState<ProviderRunResponse | null>(null);
   const [runState, setRunState] = useState<RunState>("idle");
+  const [gpuState, setGpuState] = useState<ProviderRunState>("idle");
   const [activeStep, setActiveStep] = useState(-1);
   const [imageOpen, setImageOpen] = useState(false);
+  const result = cerebrasRun?.packet
+    ? ({
+        encounter: fallbackReview.encounter,
+        sourceCards: fallbackReview.sourceCards,
+        agents: cerebrasRun.agents ?? fallbackReview.agents,
+        cerebras: cerebrasRun.metrics,
+        openrouter: gpuRun?.metrics ?? {
+          provider: "openrouter",
+          model: OPENROUTER_MODEL,
+          totalMs: 0,
+          usedFallback: false,
+        },
+        speedup: gpuRun ? calculateSpeedup(cerebrasRun.metrics.totalMs, gpuRun.metrics.totalMs) : null,
+        packet: cerebrasRun.packet,
+        errorSummary: cerebrasRun.errorSummary ?? gpuRun?.errorSummary,
+      } satisfies RaceResult)
+    : null;
 
   async function runBenchmark() {
     setRunState("running");
-    setResult(null);
+    setGpuState("running");
+    setCerebrasRun(null);
+    setGpuRun(null);
     setActiveStep(0);
     const progressTimer = window.setInterval(() => {
       setActiveStep((step) => Math.min(step + 1, agentRoles.length - 1));
     }, 520);
 
     try {
-      const [response] = await Promise.all([
-        fetch("/api/run-review", {
+      const cerebrasPromise = fetch("/api/run-provider", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ useFallback: false }),
-        }),
-        new Promise((resolve) => window.setTimeout(resolve, 1200)),
+          body: JSON.stringify({ provider: "cerebras", useFallback: false }),
+        });
+      const gpuPromise = fetch("/api/run-provider", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ provider: "openrouter", useFallback: false }),
+      });
+      const [cerebrasResponse] = await Promise.all([
+        cerebrasPromise,
+        new Promise((resolve) => window.setTimeout(resolve, 900)),
       ]);
 
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
+      if (!cerebrasResponse.ok) {
+        throw new Error(`Cerebras API returned ${cerebrasResponse.status}`);
       }
 
-      setResult((await response.json()) as RaceResult);
+      const nextCerebrasRun = (await cerebrasResponse.json()) as ProviderRunResponse;
+      setCerebrasRun(nextCerebrasRun);
       setActiveStep(agentRoles.length - 1);
-      setRunState("complete");
+      setRunState("cerebras-complete");
+
+      try {
+        const gpuResponse = await gpuPromise;
+
+        if (!gpuResponse.ok) {
+          throw new Error(`GPU API returned ${gpuResponse.status}`);
+        }
+
+        setGpuRun((await gpuResponse.json()) as ProviderRunResponse);
+        setGpuState("complete");
+        setRunState("complete");
+      } catch {
+        setGpuRun({
+          provider: "openrouter",
+          metrics: fallbackReview.openrouter,
+          errorSummary: "GPU timing route failed safely; cached comparison shown.",
+        });
+        setGpuState("error");
+        setRunState("complete");
+      }
     } catch {
-      setResult(fallbackReview);
+      setCerebrasRun({
+        provider: "cerebras",
+        metrics: fallbackReview.cerebras,
+        agents: fallbackReview.agents,
+        packet: fallbackReview.packet,
+        errorSummary: fallbackReview.errorSummary,
+      });
+      setGpuRun({
+        provider: "openrouter",
+        metrics: fallbackReview.openrouter,
+        errorSummary: fallbackReview.errorSummary,
+      });
+      setGpuState("error");
       setActiveStep(agentRoles.length - 1);
       setRunState("error");
     } finally {
@@ -574,7 +673,13 @@ export function ReviewRoomApp() {
       <main className="locked-dashboard">
         <EventStrip />
         <IntroAndStart runState={runState} onRun={runBenchmark} />
-        <AgentProgress result={result} runState={runState} activeStep={activeStep} />
+        <AgentProgress
+          cerebrasRun={cerebrasRun}
+          gpuRun={gpuRun}
+          gpuState={gpuState}
+          runState={runState}
+          activeStep={activeStep}
+        />
 
         {runState === "error" ? (
           <div className="status-message" role="status">
@@ -588,7 +693,7 @@ export function ReviewRoomApp() {
             {result ? <OutputPanel result={result} /> : <EmptyOutputPanel runState={runState} />}
             <div className="evidence-benchmark-grid">
               <ImageExtraction result={result} runState={runState} />
-              <BenchmarkPanel result={result} runState={runState} />
+              <BenchmarkPanel result={result} gpuRun={gpuRun} gpuState={gpuState} runState={runState} />
             </div>
           </div>
         </div>

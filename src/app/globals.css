@@ -682,6 +682,11 @@ p {
   box-shadow: none;
 }
 
+.benchmark-panel-awaiting-gpu {
+  border-color: #0f766e;
+  background: linear-gradient(180deg, #ffffff 0%, #ecfdf5 100%);
+}
+
 .benchmark-subtitle {
   display: block;
   margin-top: -4px;
